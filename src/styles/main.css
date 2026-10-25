@@ -1,0 +1,194 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-inter: "Inter", sans-serif;
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --background: hsl(0 0% 100%);
+    --foreground: hsl(0 0% 3.9%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(0 0% 3.9%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(0 0% 3.9%);
+    --primary: hsl(0 0% 9%);
+    --primary-foreground: hsl(0 0% 98%);
+    --secondary: hsl(0 0% 96.1%);
+    --secondary-foreground: hsl(0 0% 9%);
+    --muted: hsl(0 0% 96.1%);
+    --muted-foreground: hsl(0 0% 45.1%);
+    --accent: hsl(0 0% 96.1%);
+    --accent-foreground: hsl(0 0% 9%);
+    --destructive: hsl(0 84.2% 60.2%);
+    --destructive-foreground: hsl(0 0% 98%);
+    --border: hsl(0 0% 89.8%);
+    --input: hsl(0 0% 89.8%);
+    --ring: hsl(0 0% 3.9%);
+
+    --chart-1: hsl(12 76% 61%);
+    --chart-2: hsl(173 58% 39%);
+    --chart-3: hsl(197 37% 24%);
+    --chart-4: hsl(43 74% 66%);
+    --chart-5: hsl(27 87% 67%);
+
+    --sidebar: hsl(0 0% 98%);
+    --sidebar-foreground: hsl(240 5.3% 26.1%);
+    --sidebar-primary: hsl(240 5.9% 10%);
+    --sidebar-primary-foreground: hsl(0 0% 98%);
+    --sidebar-accent: hsl(240 4.8% 95.9%);
+    --sidebar-accent-foreground: hsl(240 5.9% 10%);
+    --sidebar-border: hsl(220 13% 91%);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  }
+
+  .dark,
+  :root[class~="dark"] {
+    --background: hsl(0 0% 3.9%);
+    --foreground: hsl(0 0% 98%);
+    --card: hsl(0 0% 3.9%);
+    --card-foreground: hsl(0 0% 98%);
+    --popover: hsl(0 0% 3.9%);
+    --popover-foreground: hsl(0 0% 98%);
+    --primary: hsl(0 0% 98%);
+    --primary-foreground: hsl(0 0% 9%);
+    --secondary: hsl(0 0% 14.9%);
+    --secondary-foreground: hsl(0 0% 98%);
+    --muted: hsl(0 0% 14.9%);
+    --muted-foreground: hsl(0 0% 63.9%);
+    --accent: hsl(0 0% 14.9%);
+    --accent-foreground: hsl(0 0% 98%);
+    --destructive: hsl(0 62.8% 30.6%);
+    --destructive-foreground: hsl(0 0% 98%);
+    --border: hsl(0 0% 14.9%);
+    --input: hsl(0 0% 14.9%);
+    --ring: hsl(0 0% 83.1%);
+
+    --chart-1: hsl(220 70% 50%);
+    --chart-2: hsl(160 60% 45%);
+    --chart-3: hsl(30 80% 55%);
+    --chart-4: hsl(280 65% 60%);
+    --chart-5: hsl(340 75% 55%);
+
+    --sidebar: hsl(240 5.9% 10%);
+    --sidebar-foreground: hsl(240 4.8% 95.9%);
+    --sidebar-primary: hsl(224.3 76.3% 48%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(240 3.7% 15.9%);
+    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+    --sidebar-border: hsl(240 3.7% 15.9%);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* A quiet frame around a tiny, living world. */
+body { margin: 0; background: #f8f9f5; color: #343d30; }
+.little-world { max-width: 1240px; margin: 0 auto; padding: 0 64px; font-family: 'Inter', sans-serif; }
+.world-header { height: 105px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0e4d9; }
+.brand { text-decoration: none; color: #34422c; font-weight: 750; font-size: 23px; letter-spacing: -1px; display: flex; align-items: center; gap: 10px; }
+.brand-icon { color: #768b50; font-size: 35px; line-height: 1; }.brand-dot { color: #8b9a65; }
+.header-note,.edition { font-family: monospace; font-size: 10px; letter-spacing: 1.2px; color: #8a8e80; }.edition { color: #626c58; }.edition span { padding: 0 9px; color: #b5baa9; }
+.scene-intro { text-align: center; padding: 51px 0 33px; }.eyebrow { display: flex; gap: 9px; justify-content: center; align-items: center; font-family: monospace; letter-spacing: 2px; font-size: 10px; color: #7e896e; }.eyebrow>span { width: 5px; height: 5px; background: #8a9a65; }
+.scene-intro h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(34px,4vw,50px); line-height: 1.25; letter-spacing: -1.7px; margin: 15px 0 12px; }.scene-intro h1>span { color: #8d9b67; }.scene-intro p { font-size: 13px; color: #8a8d80; letter-spacing: .1px; margin: 0; }
+.scene-card { position: relative; height: clamp(390px,49vh,560px); background: #fdfefa; border: 1px solid #dfe4d5; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 25px #455b2410; }
+.scene-viewport { position: absolute; inset: 0; }.scene-viewport canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }.scene-topline,.scene-bottomline { position: absolute; z-index: 1; left: 25px; right: 25px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }.scene-topline { top: 24px; }.scene-bottomline { bottom: 20px; }.scene-live { font-family: monospace; font-size: 9px; letter-spacing: 1.3px; color: #8d9683; display: flex; align-items: center; gap: 8px; }.scene-live i { width: 6px; height: 6px; background: #8b9e65; border-radius: 50%; box-shadow: 0 0 0 3px #8b9e6512; }.scene-live i.paused { background: #baa77a; }.weather { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #969c8d; }.scene-location { font: 8px monospace; letter-spacing: 1.5px; color: #abb09f; }.expand-button { pointer-events: auto; padding: 7px; background: transparent; color: #7e8970; border: 1px solid #e7eade; border-radius: 5px; }
+.playback-bar { display: flex; align-items: center; justify-content: space-between; padding: 19px 1px 24px; border-bottom: 1px solid #e1e5d9; }.playback-controls { display: flex; align-items: center; gap: 16px; }.play-button { display: flex; align-items: center; gap: 9px; border: 1px solid #dfe4d5; background: #fdfefa; border-radius: 6px; padding: 10px 15px; color: #556246; font-size: 11px; }.reset-button,.speed-button { border: none; background: transparent; color: #7b856e; padding: 7px 0; }.speed-button { display: flex; align-items: center; gap: 6px; font-size: 11px; }.speed-label { color: #a1a694; font-size: 10px; }.control-divider { height: 18px; width: 1px; background: #dfe3d7; }.phase { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #8b927e; }.phase-dot { width: 4px; height: 4px; border-radius: 50%; background: #acb794; }.loop-label { font: 9px monospace; letter-spacing: 1px; color: #9aa28b; }.loop-label>span { font-size: 17px; margin-left: 8px; }
+.world-footer { display: flex; align-items: center; justify-content: space-between; padding: 25px 0 30px; }.dog-note { display: flex; align-items: center; gap: 12px; }.paw-icon { color: #879773; border: 1px solid #e0e5d5; border-radius: 50%; width: 36px; height: 36px; display: grid; place-items: center; }.dog-note p { font-size: 11px; color: #707b62; margin: 0; line-height: 1.8; }.dog-note p>span { display: block; color: #9bA18f; font-size: 10px; }.made-note { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #9ca38f; }button { transition: background .2s, color .2s; }button:hover { background: #eaf0e0; color: #3e542a; }button:focus-visible,a:focus-visible { outline: 2px solid #7f9460; outline-offset: 4px; }.expanded { max-width: none; }.expanded .scene-card { height: 70vh; }.expanded .scene-intro { padding: 22px 0; }.expanded .scene-intro h1 { font-size: 32px; }.scene-error { position: absolute; top: 45%; left: 10%; right: 10%; text-align: center; color: #7c5d45; font-size: 13px; }
+@media(min-width:1500px){.little-world{max-width:1360px}.scene-intro{padding-top:65px}.scene-card{height:55vh}}
+@media(max-width:760px){.little-world{padding:0 22px}.world-header{height:78px}.header-note{display:none}.brand{font-size:20px}.edition{font-size:8px;letter-spacing:.6px}.scene-intro{padding:38px 0 28px}.scene-intro h1{font-size:36px}.scene-intro p{font-size:11px}.scene-card{height:430px}.scene-topline,.scene-bottomline{left:16px;right:16px}.weather{font-size:8px;gap:4px}.scene-live{font-size:7px;letter-spacing:.5px}.playback-bar{flex-wrap:wrap;gap:20px}.phase{order:3;width:100%;justify-content:center;font-size:10px}.playback-controls{gap:12px}.loop-label{font-size:8px}.made-note{display:none}.world-footer{justify-content:center}.scene-location{font-size:7px}.scene-viewport{inset:25px -100px}.expanded .scene-viewport{inset:0 -100px}}
+@media(prefers-reduced-motion:reduce){button{transition:none}}
