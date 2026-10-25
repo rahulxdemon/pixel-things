@@ -398,44 +398,62 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     const cats=[createCat(true),createCat(false)];
     const catBall=round(scene,0x6b9ba5,0,.09,0,.075,.075,.075);
     round(catBall,0xeac772,0,.72,.1,.7,.25,.7);
-    const playStops=[[-1.45,.8],[.7,.7],[2.75,.7],[4,-.8],[4.1,1],[3.9,2.75],[1.8,2.8],[-1.3,2.7]];
-    const playPoint=(index:number)=>new THREE.Vector3(playStops[index%playStops.length][0],0,playStops[index%playStops.length][1]);
-    function catAnchor(index:number,catIndex:number) {
-      const point=playPoint(index),direction=playPoint(index+1).sub(point).normalize();
-      const sideways=new THREE.Vector3(direction.z,0,-direction.x);
-      return index%2===catIndex?point.addScaledVector(direction,-.26).addScaledVector(sideways,.065)
-        :point.addScaledVector(sideways,catIndex===0?-.30:.30).addScaledVector(direction,-.07);
-    }
+    const playEnds=[new THREE.Vector3(-1.65,0,.72),new THREE.Vector3(3.8,0,-1.25)];
+    const hidingSpots=[new THREE.Vector3(-1.88,0,1.28),new THREE.Vector3(4.25,0,-.56)];
+    const outbound=new THREE.CatmullRomCurve3([
+      playEnds[0],new THREE.Vector3(.7,0,.7),new THREE.Vector3(2.65,0,.55),playEnds[1],
+    ],false,'centripetal');
+    const contactPositions=playEnds.map((point,index)=>{
+      const direction=outbound.getTangentAt(index===0?0:1).multiplyScalar(index===0?1:-1);
+      return point.clone().addScaledVector(direction,-.26)
+        .addScaledVector(new THREE.Vector3(direction.z,0,-direction.x),.065);
+    });
     const catFacing=new THREE.Quaternion();
     const catUp=new THREE.Vector3(0,1,0);
     const ease=(value:number)=>value*value*(3-2*value);
+    const interval=(time:number,start:number,duration:number)=>THREE.MathUtils.clamp((time-start)/duration,0,1);
     function animateCats(time:number,step:number) {
-      const beat=4.8, turnIndex=Math.floor(time/beat), local=time%beat;
-      const start=playPoint(turnIndex),end=playPoint(turnIndex+1);
-      const progress=ease(THREE.MathUtils.clamp((local-.9)/3.5,0,1));
-      catBall.position.lerpVectors(start,end,progress);
-      catBall.position.y=.09+(local>.9&&local<1.25?Math.sin((local-.9)/.35*Math.PI)*.04:0);
-      const roll=(turnIndex+progress)*Math.PI*5;
-      catBall.rotation.set(roll,roll*.4,roll*.3);
+      const beat=10,turnIndex=Math.floor(time/beat),local=time%beat;
+      const sender=turnIndex%2,receiver=1-sender;
+      const rollTime=interval(local,1,4.2);
+      const progress=1-(1-rollTime)**2;
+      const pathProgress=sender===0?progress:1-progress;
+      catBall.position.copy(outbound.getPointAt(pathProgress));
+      catBall.position.y=.09+(local>1&&local<1.35?Math.sin((local-1)/.35*Math.PI)*.04:0);
+      const roll=pathProgress*outbound.getLength()/.075;
+      catBall.rotation.set(roll*.3,roll*.2,roll);
       cats.forEach((cat,index)=>{
-        const from=catAnchor(turnIndex,index),to=catAnchor(turnIndex+1,index);
-        cat.root.position.lerpVectors(from,to,progress);
-        const running=local>.9&&local<4.4;
-        const blend=Math.sin(Math.PI*THREE.MathUtils.clamp((local-.9)/3.5,0,1));
-        const direction=running?to.clone().sub(from):catBall.position.clone().sub(cat.root.position);
+        const receiving=index===receiver;
+        const from=receiving?hidingSpots[index]:contactPositions[index];
+        const to=receiving?contactPositions[index]:hidingSpots[index];
+        const movement=receiving?interval(local,4.1,1.1):interval(local,6.1,1.7);
+        cat.root.position.lerpVectors(from,to,ease(movement));
+        const moving=movement>0&&movement<1;
+        const direction=moving?to.clone().sub(from):catBall.position.clone().sub(cat.root.position);
         catFacing.setFromAxisAngle(catUp,Math.atan2(direction.x,direction.z));
         if(time===0) cat.root.quaternion.copy(catFacing);
-        else cat.root.quaternion.rotateTowards(catFacing,step*9);
-        cat.root.position.y=running?Math.abs(Math.sin(time*15+index))*.025*blend:0;
+        else cat.root.quaternion.rotateTowards(catFacing,step*8);
+        // The waiting cat crouches, then springs out just as the ball reaches it.
+        const crouch=receiving&&local<4.1?ease(interval(local,3.1,1)):0;
+        cat.root.scale.y=.72*(1-.14*crouch);
+        cat.root.position.y=receiving&&moving?Math.sin(movement*Math.PI)*.18
+          :moving?Math.abs(Math.sin(time*14+index))*.025*Math.sin(movement*Math.PI):0;
         cat.paws.forEach((paw,pawIndex)=>{
-          paw.rotation.x=running?Math.sin(time*15+(pawIndex===0||pawIndex===3?0:Math.PI)+index)*.55*blend:0;
+          paw.rotation.x=moving?Math.sin(time*14+(pawIndex===0||pawIndex===3?0:Math.PI))* .48*Math.sin(movement*Math.PI):0;
+          if(crouch>0) paw.rotation.x=(pawIndex%2===0?.45:-.35)*crouch;
+          if(receiving&&moving&&pawIndex%2===1) paw.rotation.x=-.65*Math.sin(movement*Math.PI);
         });
-        if(turnIndex%2===index&&local<1.15) {
-          // Lift, reach the ball, then lower the front paw after the tap.
-          const swipe=local<.9?ease(local/.9):1-ease((local-.9)/.25);
+        if(index===sender&&local<1.25) {
+          const swipe=local<1?ease(local):1-ease((local-1)/.25);
           cat.paws[1].rotation.x=-.9*swipe;
         }
-        cat.tail.rotation.z=Math.sin(time*3+index*2)*.24;
+        // The sender stays behind to groom, then settles into its own hiding spot.
+        if(index===sender&&local>2.3&&local<3.9) {
+          const grooming=Math.sin(interval(local,2.3,1.6)*Math.PI);
+          cat.paws[3].rotation.x=-1.65*grooming;
+          cat.paws[3].rotation.z=-.25*grooming;
+        } else cat.paws[3].rotation.z=0;
+        cat.tail.rotation.z=Math.sin(time*(crouch>0?6:2.5)+index*2)*(crouch>0?.12:.24);
         cat.tail.rotation.x=Math.sin(time*2.2+index)*.10;
       });
     }
