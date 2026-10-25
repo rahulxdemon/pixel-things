@@ -27,7 +27,7 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     renderer.setClearColor(0xfdfefa, 0);
     const canvas = renderer.domElement;
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'Shizuka in a pink skirt with dark pigtails, swinging beside an empty swing and seesaw in a pixel playground');
+    canvas.setAttribute('aria-label', 'Shizuka in a pink skirt with dark pigtails, swinging beside an empty swing, seesaw, and sandbox on a stone-paved pixel playground');
     canvas.setAttribute('data-testid', 'playground-canvas');
     container.appendChild(canvas);
 
@@ -79,10 +79,14 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     const grass = [0x638737, 0x749344, 0x84a24b, 0x587b32, 0x96aa59];
     const sand = [0xc4b894, 0xcbbf9c, 0xd2c6a5, 0xc0b38f, 0xd5c9a8];
     // Nearest-filtered grains stay crisp at the scene's low rendering resolution.
-    const sandPixels = new Uint8Array(4 * 4 * 4);
-    const grainValues = [255, 236, 255, 250, 248, 255, 221, 255, 255, 244, 255, 231, 240, 255, 249, 255];
-    grainValues.forEach((value, index) => sandPixels.set([value, value, value, 255], index * 4));
-    const sandTexture = new THREE.DataTexture(sandPixels, 4, 4);
+    const sandPixels = new Uint8Array(16 * 16 * 4);
+    let grainSeed=739;
+    for(let pixel=0;pixel<256;pixel++) {
+      grainSeed=grainSeed*16807%2147483647;
+      const value=grainSeed%11===0?215:239+grainSeed%17;
+      sandPixels.set([value,value,value,255],pixel*4);
+    }
+    const sandTexture = new THREE.DataTexture(sandPixels, 16, 16);
     sandTexture.colorSpace = THREE.SRGBColorSpace;
     sandTexture.magFilter = THREE.NearestFilter;
     sandTexture.minFilter = THREE.NearestFilter;
@@ -101,22 +105,113 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     for (let x = -5.5; x <= 5.5; x += .16) for (let z = -3.9; z <= 3.9; z += .16) {
       if (roundedRect(x, z, 5.2, 3.65, .55) > (random() - .5) * .24) continue;
       const border = roundedRect(x, z, 4.75, 3.2, .4) > (random() - .5) * .14;
-      const worn = !border && ((x + 1.85) ** 2 / .4 + (z + 1) ** 2 / 2.2 < 1 || (x + .15) ** 2 / .4 + (z + 1) ** 2 / 2.2 < 1);
-      const palette = border ? grass : sand;
-      const patch = Math.sin(x * 1.8 + Math.sin(z * 1.3)) * Math.cos(z * 1.6 - x * .4);
-      const sandIndex = THREE.MathUtils.clamp(Math.floor(2 + patch * 1.7 + (random() - .5) * 1.8), 0, sand.length - 1);
-      const color = worn ? [0xb1a27e, 0xbcad89, 0xc2b38d][Math.floor(random() * 3)] : border ? palette[Math.floor(random() * palette.length)] : sand[sandIndex];
-      const tile = box(scene, color, x, -.055 + random() * .012, z, .162, .11, .162);
-      if (!border) tile.material = texturedSand(color);
+      const color = border ? grass[Math.floor(random() * grass.length)] : 0x82796b;
+      box(scene, color, x, -.07, z, .162, .11, .162);
       if (border && random() > .62) {
-        box(scene, grass[Math.floor(random() * grass.length)], x, .05, z, .027, .08 + random() * .10, .027);
-      } else if (!border && random() > .86) {
-        const pebble = random();
-        box(scene, pebble > .5 ? 0xab9976 : 0xe0d2b2,
-          x + (random() - .5) * .09, .016, z + (random() - .5) * .09,
-          .025 + pebble * .035, .015, .025 + random() * .035);
+        box(scene, grass[Math.floor(random() * grass.length)], x, .04, z, .027, .08 + random() * .10, .027);
       }
     }
+    // Lighter limestone branches connect the entry to each piece of equipment.
+    const paths = [
+      [[-.8,3.15],[-.8,.65]],
+      [[-.8,1.8],[-2.35,1.8]], // sandbox entrance
+      [[-.8,.65],[-1,.1]], // swing approach
+      [[-.8,.65],[1.5,.65]],
+      [[1.5,.65],[1.5,1.1]], // seesaw approach
+      [[1.5,.65],[2.5,.35]],
+      [[2.5,.35],[3.35,-1.8]], // bench approach
+    ];
+    function onPath(x: number, z: number) {
+      return paths.some(([a,b]) => {
+        const dx=b[0]-a[0], dz=b[1]-a[1];
+        const u=THREE.MathUtils.clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz),0,1);
+        return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz)<.30;
+      });
+    }
+    const stoneShades=[0xa99b86,0xb5a58f,0xbdae98,0xa99c8c,0xb0a08b];
+    const pathShades=[0xd0cbbb,0xc8c4b6,0xd7d1c0,0xc9c8bc];
+    // Small flat pavers in alternating pairs, with recessed joints like the reference.
+    for(let row=0;row<18;row++) for(let column=0;column<27;column++) {
+      const cellX=-4.68+column*.36, cellZ=-3.06+row*.36;
+      const horizontal=(row+column)%2===0;
+      for(const offset of [-.09,.09]) {
+        const x=cellX+(horizontal?0:offset), z=cellZ+(horizontal?offset:0);
+        const width=horizontal?.335:.155, depth=horizontal?.155:.335;
+        if(roundedRect(Math.abs(x)+width/2,Math.abs(z)+depth/2,4.75,3.2,.4)>0) continue;
+        const palette=onPath(x,z)?pathShades:stoneShades;
+        const color=palette[Math.floor(random()*palette.length)];
+        box(scene,color,x,-.014+random()*.004,z,width,.055,depth);
+        if(random()>.76) {
+          box(scene,onPath(x,z)?0xb9b7a9:0x978b79,x+(random()-.5)*width*.55,.017,z+(random()-.5)*depth*.55,.025,.003,.022);
+        }
+      }
+    }
+    // A separate timber-edged sandbox keeps the grainy sand in one small play area.
+    const sandboxX=-3.3, sandboxZ=1.8;
+    box(scene,0x886346,sandboxX,.085,sandboxZ-.77,1.92,.19,.15);
+    box(scene,0x886346,sandboxX,.085,sandboxZ+.77,1.92,.19,.15);
+    box(scene,0x9c7751,sandboxX-.885,.085,sandboxZ,.15,.19,1.4);
+    box(scene,0x9c7751,sandboxX+.885,.085,sandboxZ,.15,.19,1.4);
+    for(let ix=0;ix<22;ix++) for(let iz=0;iz<18;iz++) {
+      const dx=-.772+ix*.0735, dz=-.6375+iz*.075;
+      const mound=Math.exp(-((dx-.2)**2+(dz+.2)**2)/.10)*.035;
+      const ripple=Math.sin(dx*9+Math.cos(dz*7))*.004;
+      const color=sand[THREE.MathUtils.clamp(Math.floor(2+Math.sin(dx*4+dz*2)*1.2+(random()-.5)*.8),0,4)];
+      const tile=box(scene,color,sandboxX+dx,.03+mound+ripple,sandboxZ+dz,.075,.055,.077);
+      tile.material=texturedSand(color);
+      if(random()>.86) box(scene,random()>.5?0xe8d9b6:0xb6a47e,sandboxX+dx,.061+mound+ripple,sandboxZ+dz,.018,.004,.022);
+    }
+    for(const x of [-.885,.885]) for(const z of [-.77,.77]) {
+      box(scene,0xb28c62,sandboxX+x,.19,sandboxZ+z,.19,.04,.19);
+    }
+    const toys=new THREE.Group(); toys.position.set(sandboxX,0,sandboxZ); scene.add(toys);
+    function ring(parent: THREE.Object3D, color: number, radius: number, tube: number, x: number, y: number, z: number, arc=Math.PI*2) {
+      const geometry=new THREE.TorusGeometry(radius,tube,6,16,arc);geometries.add(geometry);
+      return mesh(parent,geometry,color,x,y,z,1,1,1);
+    }
+    // Open bucket with a thick rim and an upright carry handle.
+    const bucket=new THREE.Group();bucket.position.set(-.52,.06,-.32);toys.add(bucket);
+    const bucketGeometry=new THREE.CylinderGeometry(.13,.095,.23,12);geometries.add(bucketGeometry);
+    mesh(bucket,bucketGeometry,0x559eaa,0,.115,0,1,1,1);
+    mesh(bucket,cylinder,0x386872,0,.232,0,.112,.006,.112);
+    ring(bucket,0x78bec3,.123,.018,0,.235,0).rotation.x=Math.PI/2;
+    ring(bucket,0xe7c56c,.14,.014,0,.23,0,Math.PI);
+    // A short shovel and a rake lying naturally on the sand.
+    const shovel=new THREE.Group();shovel.position.set(-.47,.075,.28);shovel.rotation.y=-.45;toys.add(shovel);
+    rod(shovel,0xe3b45b,[0,0,-.19],[0,0,.12],.023);
+    const grip=ring(shovel,0xc66c50,.055,.014,0,0,-.22);grip.rotation.x=Math.PI/2;
+    round(shovel,0xc66c50,0,0,.18,.075,.02,.105);
+    const rake=new THREE.Group();rake.position.set(.57,.075,.04);rake.rotation.y=.32;toys.add(rake);
+    rod(rake,0x7b9c6d,[0,0,-.18],[0,0,.15],.02);
+    rod(rake,0x609080,[-.10,0,.16],[.10,0,.16],.018);
+    for(const x of [-.09,-.045,0,.045,.09]) rod(rake,0x609080,[x,0,.16],[x,0,.25],.012);
+    // Two colorful molds and a small castle made from packed, textured sand.
+    const starShape=new THREE.Shape();
+    for(let point=0;point<10;point++) {
+      const angle=point*Math.PI/5, radius=point%2?.055:.10;
+      const x=Math.cos(angle)*radius,y=Math.sin(angle)*radius;
+      if(point===0) starShape.moveTo(x,y); else starShape.lineTo(x,y);
+    }
+    starShape.closePath();
+    const starGeometry=new THREE.ExtrudeGeometry(starShape,{depth:.035,bevelEnabled:false});geometries.add(starGeometry);
+    const star=mesh(toys,starGeometry,0xe0b857,.16,.07,.46,1,1,1);star.rotation.x=-Math.PI/2;
+    mesh(toys,cylinder,0xc68492,.49,.095,.47,.085,.055,.085);
+    ring(toys,0xe1a1ad,.085,.012,.49,.126,.47).rotation.x=Math.PI/2;
+    const castle=new THREE.Group();castle.position.set(.13,.075,-.26);toys.add(castle);
+    box(castle,0xbca47b,0,.08,0,.31,.16,.25).material=texturedSand(0xbca47b);
+    for(const x of [-.16,.16]) {
+      mesh(castle,cylinder,0xcbb58b,x,.12,0,.09,.24,.09).material=texturedSand(0xcbb58b);
+      for(const [dx,dz] of [[-.045,-.045],[.045,-.045],[-.045,.045],[.045,.045]]) {
+        box(castle,0xd5bd92,x+dx,.25,dz,.045,.045,.045).material=texturedSand(0xd5bd92);
+      }
+    }
+    box(castle,0x99815e,0,.035,.128,.06,.07,.005);
+    // Broken, shallow rake lines and small scooped hollows, rather than uniform stripes.
+    for(let line=0;line<3;line++) for(let part=0;part<5;part++) {
+      box(toys,0xb5a27e,-.12+line*.045,.061,.06+part*.045,.013,.003,.032);
+    }
+    round(toys,0xbba782,-.16,.06,-.48,.10,.004,.07);
+    round(toys,0xdac7a2,-.19,.063,-.50,.065,.005,.045);
     // Tiny flowers and stones soften the perimeter without filling the play space.
     for (let i = 0; i < 28; i++) {
       const edge = i % 4;
@@ -218,7 +313,6 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     }
     for (const z of [-.15, 0, .15]) box(bench, 0xa97a4e, 0, .44, z, 1.6, .055, .12);
     for (const y of [.62, .77]) box(bench, 0xaf8459, 0, y, -.22, 1.6, .11, .055);
-    for (let i = 0; i < 4; i++) round(scene, 0xb0ad96, -3.7 + i * .23, .025, 2.75 - i * .45, .25, .045, .17);
 
     // Static ground pixels share draw calls; character joints stay independent.
     const batches = new Map<THREE.Material, THREE.Mesh[]>();
