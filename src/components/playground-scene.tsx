@@ -286,8 +286,24 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
       collar.castShadow=false;
     }
     const skirtGeometry = new THREE.CylinderGeometry(.15, .29, .29, 12);
+    const skirtShades=[0xeaa0bb,0xeaa0bb,0xeaa0bb,0xf0b2c9,0xe291ae,0xedabc3];
+    const skirtPixels=new Uint8Array(32*8*4);
+    let skirtSeed=419;
+    for(let pixel=0;pixel<256;pixel++) {
+      skirtSeed=skirtSeed*16807%2147483647;
+      const shade=skirtShades[skirtSeed%skirtShades.length];
+      skirtPixels.set([(shade>>16)&255,(shade>>8)&255,shade&255,255],pixel*4);
+    }
+    const skirtTexture=new THREE.DataTexture(skirtPixels,32,8);
+    skirtTexture.colorSpace=THREE.SRGBColorSpace;
+    skirtTexture.magFilter=THREE.NearestFilter;
+    skirtTexture.minFilter=THREE.NearestFilter;
+    skirtTexture.generateMipmaps=false;
+    skirtTexture.needsUpdate=true;
+    const skirtMaterial=new THREE.MeshLambertMaterial({map:skirtTexture});
     geometries.add(skirtGeometry);
-    const skirt = mesh(girl, skirtGeometry, 0xd96b93, 0, .16, .07, 1, 1, 1);
+    const skirt = mesh(girl, skirtGeometry, 0xeaa0bb, 0, .16, .07, 1, 1, 1);
+    skirt.material=skirtMaterial;
     skirt.rotation.x = -.22;
     const headPivot = new THREE.Group(); headPivot.position.y = .65; headPivot.scale.setScalar(.90); girl.add(headPivot);
     const head = new THREE.Group(); head.position.y = -.65; headPivot.add(head);
@@ -389,6 +405,7 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
       scene.traverse(object => { if (object instanceof THREE.InstancedMesh) object.dispose(); });
       geometries.forEach(geometry => geometry.dispose()); materials.forEach(mat => mat.dispose());
       sandMaterials.forEach(mat => mat.dispose()); sandTexture.dispose();
+      skirtMaterial.dispose(); skirtTexture.dispose();
       renderer.dispose(); canvas.remove();
     };
   }, [controls, onPhase, onCount]);
