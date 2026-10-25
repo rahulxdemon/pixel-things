@@ -364,10 +364,10 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     // Two tiny rounded cats share a ball, taking turns batting it along open paving.
     function createCat(orange: boolean) {
       const root=new THREE.Group();root.scale.setScalar(.72);scene.add(root);
-      const coat=orange?0xcd884a:0xe9e6dd, patch=orange?0xa86736:0x878a8c;
+      const coat=orange?0xe6a13d:0xe9e6dd, patch=orange?0xc88324:0x878a8c;
       round(root,coat,0,.29,0,.14,.17,.27);
       round(root,coat,0,.39,.21,.15,.145,.14);
-      round(root,orange?0xe8ba7f:0xf6f1e7,0,.34,.32,.10,.065,.055);
+      round(root,orange?0xf3ce83:0xf6f1e7,0,.34,.32,.10,.065,.055);
       for(const side of [-1,1]) {
         const earGeometry=new THREE.ConeGeometry(.075,.15,4);geometries.add(earGeometry);
         const ear=mesh(root,earGeometry,side<0?patch:coat,side*.105,.56,.20,1,1,.65);
@@ -381,15 +381,20 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
       } else {
         round(root,patch,-.055,.40,-.10,.105,.055,.13);
         round(root,patch,.055,.45,.185,.095,.09,.12);
+        round(root,patch,.123,.31,-.08,.023,.075,.09);
+        round(root,0x9b9d9e,-.125,.29,.055,.023,.06,.07);
+        round(root,0x9b9d9e,.025,.447,.045,.065,.018,.065);
+        round(root,patch,-.035,.31,-.248,.065,.06,.025);
       }
       const paws: THREE.Group[]=[];
       for(const x of [-.095,.095]) for(const z of [-.16,.16]) {
         const leg=new THREE.Group();leg.position.set(x,.25,z);root.add(leg);
         rod(leg,coat,[0,0,0],[0,-.17,.012],.038);
-        round(leg,orange?0xe4ad6e:0xf7f3e9,0,-.175,.04,.046,.04,.068);
+        round(leg,orange?0xefbe63:0xf7f3e9,0,-.175,.04,.046,.04,.068);
         paws.push(leg);
       }
       const tail=new THREE.Group();tail.position.set(0,.35,-.23);root.add(tail);
+      tail.scale.setScalar(.75);
       rod(tail,patch,[0,0,0],[0,.16,-.16],.035);
       rod(tail,coat,[0,.16,-.16],[0,.35,-.22],.032);
       round(tail,patch,0,.36,-.20,.038,.05,.045);
