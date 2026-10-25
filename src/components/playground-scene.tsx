@@ -27,7 +27,7 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     renderer.setClearColor(0xfdfefa, 0);
     const canvas = renderer.domElement;
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'Shizuka in a pink skirt with dark pigtails, swinging beside an empty swing, seesaw, and sandbox on a stone-paved pixel playground');
+    canvas.setAttribute('aria-label', 'Shizuka in a pink skirt with dark pigtails, swinging beside an empty swing, seesaw, and sandbox while an orange cat and a white-gray cat play with a ball on the stone paving');
     canvas.setAttribute('data-testid', 'playground-canvas');
     container.appendChild(canvas);
 
@@ -361,6 +361,85 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     for (const z of [-.15, 0, .15]) box(bench, 0xa97a4e, 0, .44, z, 1.6, .055, .12);
     for (const y of [.62, .77]) box(bench, 0xaf8459, 0, y, -.22, 1.6, .11, .055);
 
+    // Two tiny rounded cats share a ball, taking turns batting it along open paving.
+    function createCat(orange: boolean) {
+      const root=new THREE.Group();root.scale.setScalar(.72);scene.add(root);
+      const coat=orange?0xcd884a:0xe9e6dd, patch=orange?0xa86736:0x878a8c;
+      round(root,coat,0,.29,0,.14,.17,.27);
+      round(root,coat,0,.39,.21,.15,.145,.14);
+      round(root,orange?0xe8ba7f:0xf6f1e7,0,.34,.32,.10,.065,.055);
+      for(const side of [-1,1]) {
+        const earGeometry=new THREE.ConeGeometry(.075,.15,4);geometries.add(earGeometry);
+        const ear=mesh(root,earGeometry,side<0?patch:coat,side*.105,.56,.20,1,1,.65);
+        ear.rotation.z=side*-.15;
+        round(root,0x413e32,side*.065,.405,.337,.018,.024,.008);
+      }
+      round(root,0xba8480,0,.35,.372,.022,.015,.012);
+      if(orange) {
+        for(const z of [-.15,-.03,.09]) round(root,patch,0,.435,z,.10,.015,.025);
+        round(root,patch,0,.50,.23,.025,.016,.06);
+      } else {
+        round(root,patch,-.055,.40,-.10,.105,.055,.13);
+        round(root,patch,.055,.45,.185,.095,.09,.12);
+      }
+      const paws: THREE.Group[]=[];
+      for(const x of [-.095,.095]) for(const z of [-.16,.16]) {
+        const leg=new THREE.Group();leg.position.set(x,.25,z);root.add(leg);
+        rod(leg,coat,[0,0,0],[0,-.17,.012],.038);
+        round(leg,orange?0xe4ad6e:0xf7f3e9,0,-.175,.04,.046,.04,.068);
+        paws.push(leg);
+      }
+      const tail=new THREE.Group();tail.position.set(0,.35,-.23);root.add(tail);
+      rod(tail,patch,[0,0,0],[0,.16,-.16],.035);
+      rod(tail,coat,[0,.16,-.16],[0,.35,-.22],.032);
+      round(tail,patch,0,.36,-.20,.038,.05,.045);
+      return {root,paws,tail};
+    }
+    const cats=[createCat(true),createCat(false)];
+    const catBall=round(scene,0x6b9ba5,0,.09,0,.075,.075,.075);
+    round(catBall,0xeac772,0,.72,.1,.7,.25,.7);
+    const playStops=[[-1.45,.8],[.7,.7],[2.75,.7],[4,-.8],[4.1,1],[3.9,2.75],[1.8,2.8],[-1.3,2.7]];
+    const playPoint=(index:number)=>new THREE.Vector3(playStops[index%playStops.length][0],0,playStops[index%playStops.length][1]);
+    function catAnchor(index:number,catIndex:number) {
+      const point=playPoint(index),direction=playPoint(index+1).sub(point).normalize();
+      const sideways=new THREE.Vector3(direction.z,0,-direction.x);
+      return index%2===catIndex?point.addScaledVector(direction,-.26).addScaledVector(sideways,.065)
+        :point.addScaledVector(sideways,catIndex===0?-.30:.30).addScaledVector(direction,-.07);
+    }
+    const catFacing=new THREE.Quaternion();
+    const catUp=new THREE.Vector3(0,1,0);
+    const ease=(value:number)=>value*value*(3-2*value);
+    function animateCats(time:number,step:number) {
+      const beat=4.8, turnIndex=Math.floor(time/beat), local=time%beat;
+      const start=playPoint(turnIndex),end=playPoint(turnIndex+1);
+      const progress=ease(THREE.MathUtils.clamp((local-.9)/3.5,0,1));
+      catBall.position.lerpVectors(start,end,progress);
+      catBall.position.y=.09+(local>.9&&local<1.25?Math.sin((local-.9)/.35*Math.PI)*.04:0);
+      const roll=(turnIndex+progress)*Math.PI*5;
+      catBall.rotation.set(roll,roll*.4,roll*.3);
+      cats.forEach((cat,index)=>{
+        const from=catAnchor(turnIndex,index),to=catAnchor(turnIndex+1,index);
+        cat.root.position.lerpVectors(from,to,progress);
+        const running=local>.9&&local<4.4;
+        const blend=Math.sin(Math.PI*THREE.MathUtils.clamp((local-.9)/3.5,0,1));
+        const direction=running?to.clone().sub(from):catBall.position.clone().sub(cat.root.position);
+        catFacing.setFromAxisAngle(catUp,Math.atan2(direction.x,direction.z));
+        if(time===0) cat.root.quaternion.copy(catFacing);
+        else cat.root.quaternion.rotateTowards(catFacing,step*9);
+        cat.root.position.y=running?Math.abs(Math.sin(time*15+index))*.025*blend:0;
+        cat.paws.forEach((paw,pawIndex)=>{
+          paw.rotation.x=running?Math.sin(time*15+(pawIndex===0||pawIndex===3?0:Math.PI)+index)*.55*blend:0;
+        });
+        if(turnIndex%2===index&&local<1.15) {
+          // Lift, reach the ball, then lower the front paw after the tap.
+          const swipe=local<.9?ease(local/.9):1-ease((local-.9)/.25);
+          cat.paws[1].rotation.x=-.9*swipe;
+        }
+        cat.tail.rotation.z=Math.sin(time*3+index*2)*.24;
+        cat.tail.rotation.x=Math.sin(time*2.2+index)*.10;
+      });
+    }
+
     // Static ground pixels share draw calls; character joints stay independent.
     const batches = new Map<THREE.Material, THREE.Mesh[]>();
     for (const object of [...scene.children]) {
@@ -389,6 +468,7 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
       frame = requestAnimationFrame(animate);
       const delta = Math.min((now - last) / 1000, .05); last = now;
       if (playing) elapsed += delta * speed;
+      animateCats(elapsed,playing?delta*speed:0);
       const cycle = elapsed / period * Math.PI * 2;
       swings[1].rotation.x = Math.sin(cycle) * .48;
       lowerLegs.forEach((leg, index) => { leg.rotation.x = -.16 - .24 * Math.cos(cycle + index * .08); });
