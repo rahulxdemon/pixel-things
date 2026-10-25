@@ -251,13 +251,26 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     round(girl, pink, 0, .38, 0, .20, .27, .135);
     round(girl, 0xf2b9cb, 0, .51, .01, .18, .14, .13);
     round(girl, skin, 0, .65, .015, .065, .075, .065);
+    const collarWhite=0xf5f0e7;
+    const collarBand=ring(girl,collarWhite,.071,.017,0,.638,.015);
+    collarBand.rotation.x=Math.PI/2;
+    // Two pointed white flaps follow the front of the blouse beneath the neck.
+    for(const side of [-1,1]) {
+      const collarGeometry=new THREE.BufferGeometry();
+      collarGeometry.setAttribute('position',new THREE.Float32BufferAttribute([
+        side*.008,.615,.095,
+        side*.15,.605,.075,
+        side*.105,.435,.15,
+      ],3));
+      collarGeometry.setIndex(side>0?[0,2,1]:[0,1,2]);
+      collarGeometry.computeVertexNormals();
+      geometries.add(collarGeometry);
+      mesh(girl,collarGeometry,collarWhite,0,0,0,1,1,1);
+    }
     const skirtGeometry = new THREE.CylinderGeometry(.15, .29, .29, 12);
     geometries.add(skirtGeometry);
     const skirt = mesh(girl, skirtGeometry, 0xd96b93, 0, .16, .07, 1, 1, 1);
     skirt.rotation.x = -.22;
-    // A few subdued panels suggest cloth folds without creating stripes.
-    round(girl, 0xe37fa1, -.15, .12, .13, .11, .13, .16);
-    round(girl, 0xe37fa1, .15, .12, .13, .11, .13, .16);
     const headPivot = new THREE.Group(); headPivot.position.y = .65; headPivot.scale.setScalar(.90); girl.add(headPivot);
     const head = new THREE.Group(); head.position.y = -.65; headPivot.add(head);
     round(head, hair, 0, .86, -.025, .235, .255, .205);
