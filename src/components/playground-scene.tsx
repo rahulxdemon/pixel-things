@@ -252,20 +252,38 @@ export function PlaygroundScene({ controls, onPhase, onCount }: Props) {
     round(girl, 0xf2b9cb, 0, .51, .01, .18, .14, .13);
     round(girl, skin, 0, .65, .015, .065, .075, .065);
     const collarWhite=0xf5f0e7;
-    const collarBand=ring(girl,collarWhite,.071,.017,0,.638,.015);
-    collarBand.rotation.x=Math.PI/2;
-    // Two pointed white flaps follow the front of the blouse beneath the neck.
+    const collarBandGeometry=new THREE.CylinderGeometry(.069,.079,.035,16,1,true);
+    geometries.add(collarBandGeometry);
+    mesh(girl,collarBandGeometry,collarWhite,0,.623,.015,1,1,1);
+    // Fit the fabric to the rounded blouse instead of spanning it with flat triangles.
+    function blouseFront(x: number,y: number) {
+      const torso=.135*Math.sqrt(Math.max(0,1-(x/.20)**2-((y-.38)/.27)**2));
+      const shoulder=.01+.13*Math.sqrt(Math.max(0,1-(x/.18)**2-((y-.51)/.14)**2));
+      return Math.max(torso,shoulder)+.006;
+    }
     for(const side of [-1,1]) {
+      const outline=[new THREE.Vector2(side*.008,.615),new THREE.Vector2(side*.128,.592),
+        new THREE.Vector2(side*.095,.478),new THREE.Vector2(side*.020,.563)];
+      const positions: number[]=[];
+      function addTriangle(a: THREE.Vector2,b: THREE.Vector2,c: THREE.Vector2) {
+        const points=side>0?[a,c,b]:[a,b,c];
+        for(const point of points) positions.push(point.x,point.y,blouseFront(point.x,point.y));
+      }
+      // Small facets preserve the pointed outline while following the chest curvature.
+      for(const [ia,ib,ic] of [[0,1,2],[0,2,3]]) {
+        const a=outline[ia],b=outline[ib],c=outline[ic],steps=6;
+        const at=(i:number,j:number)=>a.clone().addScaledVector(b.clone().sub(a),i/steps)
+          .addScaledVector(c.clone().sub(a),j/steps);
+        for(let i=0;i<steps;i++) for(let j=0;j<steps-i;j++) {
+          addTriangle(at(i,j),at(i+1,j),at(i,j+1));
+          if(i+j<steps-1) addTriangle(at(i+1,j),at(i+1,j+1),at(i,j+1));
+        }
+      }
       const collarGeometry=new THREE.BufferGeometry();
-      collarGeometry.setAttribute('position',new THREE.Float32BufferAttribute([
-        side*.008,.615,.095,
-        side*.15,.605,.075,
-        side*.105,.435,.15,
-      ],3));
-      collarGeometry.setIndex(side>0?[0,2,1]:[0,1,2]);
-      collarGeometry.computeVertexNormals();
-      geometries.add(collarGeometry);
-      mesh(girl,collarGeometry,collarWhite,0,0,0,1,1,1);
+      collarGeometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+      collarGeometry.computeVertexNormals();geometries.add(collarGeometry);
+      const collar=mesh(girl,collarGeometry,collarWhite,0,0,0,1,1,1);
+      collar.castShadow=false;
     }
     const skirtGeometry = new THREE.CylinderGeometry(.15, .29, .29, 12);
     geometries.add(skirtGeometry);
