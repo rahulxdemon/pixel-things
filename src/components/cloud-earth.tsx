@@ -90,14 +90,29 @@ const fragmentShader = /* glsl */ `
   vec2 geography(vec3 n) {
     return vec2(atan(n.x, n.z)/(2.0*PI)+.5, asin(clamp(n.y,-1.0,1.0))/PI+.5);
   }
+  vec3 wanderingField(vec3 p, float time) {
+    // Continuous pseudorandom currents evolve independently along all three axes.
+    return 2.0*vec3(
+      noise(p+vec3(time*.19,-time*.11,13.7)),
+      noise(p.yzx+vec3(29.4,time*.16,-time*.13)),
+      noise(p.zxy+vec3(-time*.14,47.2,time*.21)))-1.0;
+  }
   vec3 flowingDomain(vec3 p, float time) {
-    // Large, continuous folds produce slow liquid motion, not granular cloud noise.
-    p += .42*vec3(sin(p.y*1.35+time*.23),
-                  sin(p.z*1.15-time*.19),
-                  sin(p.x*1.25+time*.16));
-    float twist = .55*sin(p.y*.9-time*.14);
-    p.xz = mat2(cos(twist),-sin(twist),sin(twist),cos(twist))*p.xz;
-    return p;
+    vec3 current = wanderingField(p*.65,time);
+    return p + current*.75 + wanderingField(p*.9+current*.6,time*.73)*.35;
+  }
+  float vaporDensity(vec2 uv, vec2 spread) {
+    // Overlapping soft samples form a continuous density falloff, not an outline.
+    float density = texture2D(uLand,uv).r*.24;
+    density += texture2D(uLand,uv+vec2(spread.x,0.0)).r*.12;
+    density += texture2D(uLand,uv-vec2(spread.x,0.0)).r*.12;
+    density += texture2D(uLand,uv+vec2(0.0,spread.y)).r*.12;
+    density += texture2D(uLand,uv-vec2(0.0,spread.y)).r*.12;
+    density += texture2D(uLand,uv+spread).r*.07;
+    density += texture2D(uLand,uv-spread).r*.07;
+    density += texture2D(uLand,uv+vec2(spread.x,-spread.y)).r*.07;
+    density += texture2D(uLand,uv+vec2(-spread.x,spread.y)).r*.07;
+    return density;
   }
   void main() {
     vec2 p = (vUv-.5)*2.0*vec2(uAspect,1.0)/(min(1.0,uAspect)*.78*.60);
@@ -115,23 +130,28 @@ const fragmentShader = /* glsl */ `
     vec3 drift = vec3(uTime*.025, -uTime*.017, uTime*.012);
     float billow = fbm(earth*5.0+drift);
     vec3 flow = flowingDomain(earth*2.0,uTime);
-    vec3 displacement = vec3(sin(flow.y+uTime*.12),
-                             sin(flow.z-uTime*.10),
-                             sin(flow.x+uTime*.08));
-    // Geography remains anchored to the rotating globe; only small eddies bend it.
-    vec2 uv = geography(normalize(earth+displacement*.018));
-    float land = texture2D(uLand, uv).r;
-    // Soft shoulders around the main cloud masses keep coastlines recognizable.
-    float fringe = (texture2D(uLand,uv+vec2(.004,0)).r + texture2D(uLand,uv-vec2(.004,0)).r
-                  + texture2D(uLand,uv+vec2(0,.007)).r + texture2D(uLand,uv-vec2(0,.007)).r)*.25;
-    float continent = smoothstep(.035,.82,land);
+    vec3 current = wanderingField(earth*2.3,uTime);
+    vec3 eddies = wanderingField(earth*4.1+current*.65,uTime*.81);
+    vec3 displacement = current*.24+eddies*.075;
+    // Move the continental mask itself along the sphere, not only its shading.
+    // Bounded tangent motion creates visible stretching and curling without
+    // letting the land drift away permanently or jump between random positions.
+    displacement -= earth*dot(displacement,earth);
+    vec2 uv = geography(normalize(earth+displacement));
+    vec2 breeze = vec2(current.x+eddies.z*.4,current.y+eddies.x*.4);
+    float breathing = .9+.25*noise(flow*.6+drift);
+    float core = vaporDensity(uv,vec2(.0045,.009)*breathing);
+    float haze = vaporDensity(uv-breeze*.009,vec2(.011,.022)*breathing);
+    float plume = vaporDensity(uv-breeze*.024,vec2(.022,.041)*breathing);
+    // Dense white gas thins into softer layers carried slightly farther by the flow.
+    // Keep the accepted land motion, but remove its hard density threshold.
+    float continent = core*.55+haze*.30+plume*.15;
     // Broad white folds travel through every continent, like a gently moving orb.
     // A continuous white foundation prevents isolated blue holes in the land.
-    float fold = sin(flow.y*1.7+flow.x*.55+flow.z*.35
-                    +1.25*sin(flow.x*1.1-flow.z*.7+uTime*.18)-uTime*.26);
-    float swell = sin(flow.x*.8-flow.y*.55+flow.z*1.2+uTime*.13);
+    float fold = sin(flow.y*1.7+flow.x*.55+flow.z*.35+current.x*1.8);
+    float swell = wanderingField(flow*.7,uTime*.67).y;
     float flowingWhite = .58+.42*smoothstep(-.85,.65,fold+swell*.24);
-    float cloud = max(continent*flowingWhite,fringe*.10);
+    float cloud = clamp(continent*flowingWhite+plume*(1.0-core)*.10,0.0,1.0);
     float light = .94+.07*dot(surface,normalize(vec3(-.45,.65,1.0)));
     vec3 ocean = vec3(.405,.625,.855)*light;
     ocean += vec3(.018,.026,.035)*(billow-.45);
