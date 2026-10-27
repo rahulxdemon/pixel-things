@@ -91,7 +91,7 @@ const fragmentShader = /* glsl */ `
     return vec2(atan(n.x, n.z)/(2.0*PI)+.5, asin(clamp(n.y,-1.0,1.0))/PI+.5);
   }
   void main() {
-    vec2 p = (vUv-.5)*2.0*vec2(uAspect,1.0)/(min(1.0,uAspect)*.78);
+    vec2 p = (vUv-.5)*2.0*vec2(uAspect,1.0)/(min(1.0,uAspect)*.78*.60);
     float radius = length(p);
     if (radius > 1.15) discard;
     float z = sqrt(max(0.0, 1.0-dot(p,p)));
