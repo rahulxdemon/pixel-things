@@ -132,7 +132,7 @@ const fragmentShader = /* glsl */ `
     vec3 flow = flowingDomain(earth*2.0,uTime);
     vec3 current = wanderingField(earth*2.3,uTime);
     vec3 eddies = wanderingField(earth*4.1+current*.65,uTime*.81);
-    vec3 displacement = current*.24+eddies*.075;
+    vec3 displacement = current*.15+eddies*.045;
     // Move the continental mask itself along the sphere, not only its shading.
     // Bounded tangent motion creates visible stretching and curling without
     // letting the land drift away permanently or jump between random positions.
@@ -141,8 +141,8 @@ const fragmentShader = /* glsl */ `
     vec2 breeze = vec2(current.x+eddies.z*.4,current.y+eddies.x*.4);
     float breathing = .9+.25*noise(flow*.6+drift);
     float core = vaporDensity(uv,vec2(.0045,.009)*breathing);
-    float haze = vaporDensity(uv-breeze*.009,vec2(.011,.022)*breathing);
-    float plume = vaporDensity(uv-breeze*.024,vec2(.022,.041)*breathing);
+    float haze = vaporDensity(uv-breeze*.006,vec2(.011,.022)*breathing);
+    float plume = vaporDensity(uv-breeze*.016,vec2(.022,.041)*breathing);
     // Dense white gas thins into softer layers carried slightly farther by the flow.
     // Keep the accepted land motion, but remove its hard density threshold.
     float continent = core*.55+haze*.30+plume*.15;
