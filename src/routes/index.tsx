@@ -40,7 +40,7 @@ function Globe({ playing, resetKey, dark, characterSet }: { playing: boolean; re
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, rect.width, rect.height);
       if (playing && previous) angle.current += Math.min((time - previous) / 1000, 0.05) * 0.105;
       previous = time;
-      const radius = Math.min(rect.width * .43, rect.height * .46, 270);
+      const radius = Math.min(rect.width * .43, rect.height * .46, 270) * .8;
       const step = Math.max(5, radius / 49); const centerX = rect.width / 2; const centerY = rect.height / 2;
       ctx.font = `${step * 1.15}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const p = new Vector3();
