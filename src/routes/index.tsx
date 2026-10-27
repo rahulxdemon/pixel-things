@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { ArrowUpRight, Moon, Pause, Play, RotateCcw, Sun } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const Route = createFileRoute('/')({ component: Index });
 
@@ -24,7 +25,7 @@ function inside(lon: number, lat: number, polygon: number[][]) {
   }
   return hit;
 }
-function Globe({ playing, resetKey, dark }: { playing: boolean; resetKey: number; dark: boolean }) {
+function Globe({ playing, resetKey, dark, characterSet }: { playing: boolean; resetKey: number; dark: boolean; characterSet: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const angle = useRef(0.35);
   useEffect(() => { angle.current = 0.35; }, [resetKey]);
@@ -53,7 +54,9 @@ function Globe({ playing, resetKey, dark }: { playing: boolean; resetKey: number
         const light = Math.max(0, Math.min(1, .48 + nx * -.22 + ny * .3 + z * .26));
         const noise = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
         if (!isLand && noise > .76 + z * .18) continue;
-        const chars = isLand ? (light > .7 ? '▓▒+=*' : '▒+=:.') : '··.:';
+        const sets: Record<string, [string, string, string]> = { classic: ['▓▒+=*', '▒+=:.', '··.:'], soft: ['▒+=:.', '+=:..', '··..'], bold: ['▓▓▒+=', '▓▒+=:', '·.::'], symbols: ['@#$%&', '#$%&+', '··.:'] };
+        const palette = sets[characterSet];
+        const chars = isLand ? (light > .7 ? palette[0] : palette[1]) : palette[2];
         const char = chars[Math.min(chars.length - 1, Math.floor(noise * chars.length))];
         const alpha = isLand ? .45 + light * .48 : .18 + light * .22;
         ctx.fillStyle = dark ? `rgba(235,235,230,${alpha})` : `rgba(25,25,23,${alpha})`;
@@ -62,16 +65,16 @@ function Globe({ playing, resetKey, dark }: { playing: boolean; resetKey: number
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw); return () => cancelAnimationFrame(frame);
-  }, [playing, dark]);
+  }, [playing, dark, characterSet]);
   return <canvas ref={canvas} className="globe-canvas" aria-label="An ASCII rendering of the rotating Earth" data-testid="earth-globe-canvas" />;
 }
 function Index() {
-  const [dark, setDark] = useState(true); const [playing, setPlaying] = useState(true); const [resetKey, setResetKey] = useState(0);
+  const [dark, setDark] = useState(true); const [playing, setPlaying] = useState(true); const [resetKey, setResetKey] = useState(0); const [characterSet, setCharacterSet] = useState('classic');
   return <main className={`app ${dark ? 'dark-mode' : 'light-mode'}`}>
     <header className="header"><a className="wordmark" href="/" data-testid="earth-home-link"><span className="brand-symbol">✳</span> EARTH<span className="brand-divider">/</span>ASCII</a><div className="header-right"><span className="header-caption" data-testid="earth-header-caption">A SMALL DIGITAL EXPERIMENT</span><button className="theme-button" onClick={() => setDark(!dark)} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} data-testid="earth-theme-toggle">{dark ? <Sun size={16}/> : <Moon size={16}/>}<span>{dark ? 'LIGHT MODE' : 'DARK MODE'}</span></button></div></header>
     <section className="intro"><div className="eyebrow"><span className="status-dot"/> AN EXPLORATION IN CHARACTERS <span className="intro-number"> / 001</span></div><h1 data-testid="earth-title">A world made of <em>type.</em></h1><p data-testid="earth-description">One planet. Thousands of characters. Always in motion.</p></section>
-    <section className="viewer" aria-label="Interactive Earth visualization"><div className="viewer-top"><span><i className={playing ? 'live-dot' : 'live-dot paused'}/><span data-testid="earth-motion-status">{playing ? 'LIVE RENDER' : 'PAUSED'}</span></span><span data-testid="earth-projection-label">ORTHOGRAPHIC PROJECTION</span></div><div className="globe-wrap"><Globe playing={playing} resetKey={resetKey} dark={dark}/><span className="crosshair crosshair-left">+</span><span className="crosshair crosshair-right">+</span></div><div className="viewer-bottom"><span>FIG. 01 <span className="muted"> / </span> PLANET EARTH</span><span>ASCII STUDY <span className="muted">©</span> 2026</span></div></section>
-    <section className="control-bar"><div className="controls"><button className="play-button" onClick={() => setPlaying(!playing)} data-testid="earth-play-pause-btn">{playing ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}<span>{playing ? 'Pause rotation' : 'Resume rotation'}</span></button><button className="reset-button" onClick={() => setResetKey(v => v + 1)} data-testid="earth-reset-btn"><RotateCcw size={14}/><span>Reset view</span></button></div><div className="control-note"><span className="small-dot"/> ROTATING ON ITS AXIS <span className="control-line"/> <span>REAL-TIME RENDER</span></div></section>
+    <section className="viewer" aria-label="Interactive Earth visualization"><div className="viewer-top"><span><i className={playing ? 'live-dot' : 'live-dot paused'}/><span data-testid="earth-motion-status">{playing ? 'LIVE RENDER' : 'PAUSED'}</span></span><span data-testid="earth-projection-label">ORTHOGRAPHIC PROJECTION</span></div><div className="globe-wrap"><Globe playing={playing} resetKey={resetKey} dark={dark} characterSet={characterSet}/><span className="crosshair crosshair-left">+</span><span className="crosshair crosshair-right">+</span></div><div className="viewer-bottom"><span>FIG. 01 <span className="muted"> / </span> PLANET EARTH</span><span>ASCII STUDY <span className="muted">©</span> 2026</span></div></section>
+    <section className="control-bar"><div className="controls"><button className="play-button" onClick={() => setPlaying(!playing)} data-testid="earth-play-pause-btn">{playing ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}<span>{playing ? 'Pause rotation' : 'Resume rotation'}</span></button><button className="reset-button" onClick={() => setResetKey(v => v + 1)} data-testid="earth-reset-btn"><RotateCcw size={14}/><span>Reset view</span></button><div className="character-picker"><span data-testid="earth-character-set-label">CHARACTERS</span><Select value={characterSet} onValueChange={setCharacterSet}><SelectTrigger className="character-select" aria-label="Characters" data-testid="earth-character-set-select"><SelectValue /></SelectTrigger><SelectContent className={`character-select-content ${dark ? "character-select-dark" : "character-select-light"}`} position="popper"><SelectItem value="classic" data-testid="earth-character-set-classic">Classic</SelectItem><SelectItem value="soft" data-testid="earth-character-set-soft">Soft</SelectItem><SelectItem value="bold" data-testid="earth-character-set-bold">Bold</SelectItem><SelectItem value="symbols" data-testid="earth-character-set-symbols">Symbols</SelectItem></SelectContent></Select></div></div><div className="control-note"><span className="small-dot"/> ROTATING ON ITS AXIS <span className="control-line"/> <span>REAL-TIME RENDER</span></div></section>
     <footer className="footer"><div><span className="footer-label">A LITTLE PERSPECTIVE</span><p data-testid="earth-footer-copy">A familiar place, seen differently.</p></div><div className="footer-right">MADE OF DOTS, LINES & A LITTLE WONDER <ArrowUpRight size={14}/></div></footer>
   </main>;
 }
