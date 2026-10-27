@@ -90,6 +90,15 @@ const fragmentShader = /* glsl */ `
   vec2 geography(vec3 n) {
     return vec2(atan(n.x, n.z)/(2.0*PI)+.5, asin(clamp(n.y,-1.0,1.0))/PI+.5);
   }
+  vec3 flowingDomain(vec3 p, float time) {
+    // Large, continuous folds produce slow liquid motion, not granular cloud noise.
+    p += .42*vec3(sin(p.y*1.35+time*.23),
+                  sin(p.z*1.15-time*.19),
+                  sin(p.x*1.25+time*.16));
+    float twist = .55*sin(p.y*.9-time*.14);
+    p.xz = mat2(cos(twist),-sin(twist),sin(twist),cos(twist))*p.xz;
+    return p;
+  }
   void main() {
     vec2 p = (vUv-.5)*2.0*vec2(uAspect,1.0)/(min(1.0,uAspect)*.78*.60);
     float radius = length(p);
@@ -105,21 +114,29 @@ const fragmentShader = /* glsl */ `
                       tilted.y,-sin(rotation)*tilted.x+cos(rotation)*tilted.z);
     vec3 drift = vec3(uTime*.025, -uTime*.017, uTime*.012);
     float billow = fbm(earth*5.0+drift);
-    float fine = fbm(earth*19.0-drift*.6);
-    vec2 warp = vec2(fbm(earth*9.0+drift), fbm(earth*9.0-drift+18.0))-.5;
-    vec2 uv = geography(earth) + warp*.013;
+    vec3 flow = flowingDomain(earth*2.0,uTime);
+    vec3 displacement = vec3(sin(flow.y+uTime*.12),
+                             sin(flow.z-uTime*.10),
+                             sin(flow.x+uTime*.08));
+    // Geography remains anchored to the rotating globe; only small eddies bend it.
+    vec2 uv = geography(normalize(earth+displacement*.018));
     float land = texture2D(uLand, uv).r;
     // Soft shoulders around the main cloud masses keep coastlines recognizable.
     float fringe = (texture2D(uLand,uv+vec2(.004,0)).r + texture2D(uLand,uv-vec2(.004,0)).r
                   + texture2D(uLand,uv+vec2(0,.007)).r + texture2D(uLand,uv-vec2(0,.007)).r)*.25;
-    float coastalDrift = (fine-.5)*.16*land*(1.0-land);
-    float cloud = smoothstep(.035,.72,land+coastalDrift);
-    cloud = max(cloud,fringe*.12);
+    float continent = smoothstep(.035,.82,land);
+    // Broad white folds travel through every continent, like a gently moving orb.
+    // A continuous white foundation prevents isolated blue holes in the land.
+    float fold = sin(flow.y*1.7+flow.x*.55+flow.z*.35
+                    +1.25*sin(flow.x*1.1-flow.z*.7+uTime*.18)-uTime*.26);
+    float swell = sin(flow.x*.8-flow.y*.55+flow.z*1.2+uTime*.13);
+    float flowingWhite = .58+.42*smoothstep(-.85,.65,fold+swell*.24);
+    float cloud = max(continent*flowingWhite,fringe*.10);
     float light = .94+.07*dot(surface,normalize(vec3(-.45,.65,1.0)));
     vec3 ocean = vec3(.405,.625,.855)*light;
     ocean += vec3(.018,.026,.035)*(billow-.45);
     ocean = mix(ocean,vec3(.65,.81,.93),pow(1.0-z,3.0)*.13);
-    // Opaque continent interiors stay pure white; only their soft borders blend.
+    // Pure white is the moving medium; its smoothly varying depth reveals blue.
     vec3 color = mix(ocean,vec3(1.0),cloud);
     // A translucent, noisy boundary, not a hard sphere rim or a solid halo.
     float edgeNoise = fbm(vec3(p*7.0,uTime*.035));
